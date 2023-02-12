@@ -74,7 +74,7 @@ func Get(url string) ([]byte, error) {
 }
 
 func mid(instanceID string) func(http.Handler) http.Handler {
-	return func (handler http.Handler) http.Handler {
+	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Instance-ID", instanceID)
 			handler.ServeHTTP(w, r)
