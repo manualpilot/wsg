@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: setup flyctl
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+        uses: superfly/flyctl-actions/setup-flyctl@master
 
       - name: deploy
         run: flyctl deploy --remote-only --config ./.deploy/fly.toml
