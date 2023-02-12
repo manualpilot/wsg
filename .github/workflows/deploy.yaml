@@ -1,4 +1,4 @@
-name: test
+name: deploy
 on:
   workflow_run:
     branches: [main]
