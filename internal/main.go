@@ -50,6 +50,7 @@ func Main(ctx context.Context, instanceID, redisURL string, bPrivateKey []byte, 
 	go SubscribeEvents(ctx, logger, state, rdb, instanceID)
 
 	router := chi.NewRouter()
+	router.Use(mid(instanceID))
 	router.Get("/.well-known/public.txt", PublicKeyRoute(privateKey))
 	router.Get("/", JoinRoute(state, logger, rdb, signer, instanceID, downstream))
 	router.Post("/", WriteHandler(state, rdb, verifier))
@@ -70,4 +71,13 @@ func Get(url string) ([]byte, error) {
 	defer resp.Body.Close()
 
 	return io.ReadAll(resp.Body)
+}
+
+func mid(instanceID string) func(http.Handler) http.Handler {
+	return func (handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Instance-ID", instanceID)
+			handler.ServeHTTP(w, r)
+		})
+	}
 }
