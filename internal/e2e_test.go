@@ -163,7 +163,7 @@ func TestE2E(t *testing.T) {
 	}
 
 	time.Sleep(defaultWaitTime)
-	res, err := rdb.Get(ctx, connectionID).Result()
+	res, err := rdb.HGet(ctx, connectionID, "inst").Result()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestE2E(t *testing.T) {
 		t.Error("did not handle drop correctly")
 	}
 
-	if redis.Nil != rdb.Get(ctx, connectionID).Err() {
+	if redis.Nil != rdb.HGet(ctx, connectionID, "inst").Err() {
 		t.Error("did not clean up connection")
 	}
 

@@ -14,6 +14,7 @@ import (
 
 	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
+	"strconv"
 )
 
 func JoinRoute(
@@ -26,6 +27,8 @@ func JoinRoute(
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
+
+		now := time.Now()
 
 		kid, err := ksuid.NewRandom()
 		if err != nil {
@@ -86,10 +89,22 @@ func JoinRoute(
 		msgChan := make(chan Message)
 
 		state.Lock.Lock()
-		state.Connections[id] = &Connection{Messages: msgChan}
+		state.Connections[id] = msgChan
 		state.Lock.Unlock()
 
-		if err := rdb.Set(ctx, id, instanceID, 90*time.Second).Err(); err != nil {
+		data := map[string]string{
+			"inst": instanceID,
+			"join": strconv.Itoa(int(now.Unix())),
+			"recv": "0",
+			"sent": "0",
+		}
+
+		if err := rdb.HSet(ctx, id, data).Err(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if err := rdb.Expire(ctx, id, 90*time.Second).Err(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -126,6 +141,11 @@ func JoinRoute(
 			for {
 				typ, b, err := conn.Read(ctx)
 				if err != nil {
+					return
+				}
+
+				if err := rdb.HIncrBy(ctx, id, "recv", 1).Err(); err != nil {
+					log.Error("failed to update received messages stats", err)
 					return
 				}
 
@@ -192,6 +212,11 @@ func JoinRoute(
 
 				if err := conn.Write(ctx, typ, msg.Buffer); err != nil {
 					log.Error("failed to write message", err)
+					return
+				}
+
+				if err := rdb.HIncrBy(ctx, id, "sent", 1).Err(); err != nil {
+					log.Error("failed to update sent messages stats", err)
 					return
 				}
 			}

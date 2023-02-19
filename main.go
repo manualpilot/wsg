@@ -17,6 +17,7 @@ import (
 
 type Env struct {
 	Port             int                   `env:"PORT,default=8080"`
+	RedirectPort     int                   `env:"REDIRECT_PORT,default=9090"`
 	InstanceID       string                `env:"INSTANCE_ID,required"`
 	ServiceDomain    string                `env:"SERVICE_DOMAIN,required"`
 	DownstreamURL    string                `env:"DOWNSTREAM_URL,required"`
@@ -63,22 +64,32 @@ func doMain(logger *slog.Logger) error {
 		TLSConfig: tlsConfig,
 	}
 
+	redirect := &http.Server{
+		Addr: fmt.Sprintf(":%v", env.RedirectPort),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			u := fmt.Sprintf("https://%v%v", env.ServiceDomain, r.RequestURI)
+			http.Redirect(w, r, u, http.StatusTemporaryRedirect)
+		}),
+	}
+
 	//goland:noinspection GoUnhandledErrorResult
 	defer server.Close()
 
+	//goland:noinspection GoUnhandledErrorResult
+	defer redirect.Close()
+
+	logger.Debug("starting...", slog.String("address", server.Addr))
+
 	ec := make(chan error)
+
 	go func() {
-		logger.Debug("starting...", slog.String("address", server.Addr))
-
-		var err error
-		if server.TLSConfig != nil {
-			err = server.ListenAndServeTLS("", "")
-			// TODO: http->https redirector server
-		} else {
-			err = server.ListenAndServe()
+		if err := server.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+			ec <- err
 		}
+	}()
 
-		if err != nil && err != http.ErrServerClosed {
+	go func() {
+		if err := redirect.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			ec <- err
 		}
 	}()

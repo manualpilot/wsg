@@ -27,7 +27,7 @@ func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier)
 
 		connection, ok := state.Connections[id]
 		if !ok {
-			instanceID, err := rdb.Get(ctx, id).Result()
+			instanceID, err := rdb.HGet(ctx, id, "inst").Result()
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
@@ -51,7 +51,7 @@ func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier)
 			return
 		}
 
-		connection.Messages <- Message{
+		connection <- Message{
 			Drop: true,
 		}
 	}
@@ -105,7 +105,7 @@ func WriteHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier
 			return
 		}
 
-		connection.Messages <- Message{
+		connection <- Message{
 			Binary: isBinary,
 			Buffer: b,
 		}
@@ -155,7 +155,7 @@ func SubscribeEvents(ctx context.Context, logger *slog.Logger, state *State, rdb
 						return
 					}
 
-					connection.Messages <- Message{
+					connection <- Message{
 						Binary: event.Binary,
 						Buffer: b,
 					}
@@ -171,7 +171,7 @@ func SubscribeEvents(ctx context.Context, logger *slog.Logger, state *State, rdb
 						return
 					}
 
-					connection.Messages <- Message{
+					connection <- Message{
 						Drop: true,
 					}
 				}()

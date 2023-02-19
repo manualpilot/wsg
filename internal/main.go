@@ -43,7 +43,7 @@ func Main(
 
 	state := &State{
 		Lock:        sync.RWMutex{},
-		Connections: make(map[string]*Connection),
+		Connections: make(map[string]chan Message),
 	}
 
 	go SubscribeEvents(ctx, logger, state, rdb, instanceID)

@@ -11,6 +11,7 @@ kill_timeout = 5
 
 [env]
   PORT = "8080"
+  REDIRECT_PORT = "9090"
   SERVICE_DOMAIN = "wsg.manualpilot.com"
 #  DOWNSTREAM_URL = "https://api.manualpilot.com/wsg"
   DOWNSTREAM_URL = "https://eox7ix0qarb1ynp.m.pipedream.net"
@@ -23,10 +24,22 @@ kill_timeout = 5
   internal_port = 8080
   protocol = "tcp"
 
-[services.concurrency]
-  hard_limit = 75
-  soft_limit = 50
-  type = "connections"
+  [services.concurrency]
+    hard_limit = 75
+    soft_limit = 50
+    type = "connections"
 
-[[services.ports]]
-  port = 443
+  [[services.ports]]
+    port = 443
+
+[[services]]
+  internal_port = 9090
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 75
+    soft_limit = 50
+    type = "connections"
+
+  [[services.ports]]
+    port = 80

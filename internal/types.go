@@ -10,13 +10,9 @@ type Message struct {
 	Buffer []byte
 }
 
-type Connection struct {
-	Messages chan Message
-}
-
 type State struct {
 	Lock        sync.RWMutex
-	Connections map[string]*Connection
+	Connections map[string]chan Message
 }
 
 type EventType string
