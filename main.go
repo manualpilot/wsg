@@ -13,6 +13,8 @@ import (
 	"golang.org/x/exp/slog"
 	"manualpilot/wsg/impl"
 	"manualpilot/wsg/internal"
+	"log"
+	"io"
 )
 
 type Env struct {
@@ -62,6 +64,8 @@ func doMain(logger *slog.Logger) error {
 		Addr:      fmt.Sprintf(":%v", env.Port),
 		Handler:   router,
 		TLSConfig: tlsConfig,
+		// TODO: we actually only want to discard TLS handshake errors as they are caused by automated scanners
+		ErrorLog:  log.New(io.Discard, "", 0),
 	}
 
 	redirect := &http.Server{
