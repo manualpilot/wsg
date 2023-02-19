@@ -1,9 +1,6 @@
-# fly.toml file generated for wsg on 2023-02-10T08:57:57+11:00
-
 app = "wsg"
 kill_signal = "SIGINT"
 kill_timeout = 5
-processes = []
 
 [build]
   builder = "paketobuildpacks/builder:base"
@@ -14,43 +11,22 @@ processes = []
 
 [env]
   PORT = "8080"
+  SERVICE_DOMAIN = "wsg.manualpilot.com"
+#  DOWNSTREAM_URL = "https://api.manualpilot.com/wsg"
+  DOWNSTREAM_URL = "https://eox7ix0qarb1ynp.m.pipedream.net"
 
 [experimental]
   auto_rollback = true
   cmd = ["/workspace/.deploy/start.sh"]
 
 [[services]]
-  http_checks = []
   internal_port = 8080
-  processes = ["app"]
   protocol = "tcp"
-  script_checks = []
-  [services.concurrency]
-    hard_limit = 25
-    soft_limit = 20
-    type = "connections"
 
-  [[services.ports]]
-    force_https = true
-    handlers = ["http"]
-    port = 80
+[services.concurrency]
+  hard_limit = 75
+  soft_limit = 50
+  type = "connections"
 
-  [services.ports.http_options.response.headers]
-    fly-request-id = false
-    server = "manualpilot"
-    via = false
-
-  [[services.ports]]
-    handlers = ["tls", "http"]
-    port = 443
-
-  [services.ports.http_options.response.headers]
-    fly-request-id = false
-    server = "manualpilot"
-    via = false
-
-  [[services.tcp_checks]]
-    grace_period = "1s"
-    interval = "15s"
-    restart_limit = 0
-    timeout = "2s"
+[[services.ports]]
+  port = 443

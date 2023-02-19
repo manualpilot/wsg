@@ -9,9 +9,10 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
+	"manualpilot/wsg/impl"
 )
 
-func DropHandler(state *State, rdb *redis.Client, verifier RequestVerifier) http.HandlerFunc {
+func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := verifier(r)
 		if id == "" {
@@ -56,7 +57,7 @@ func DropHandler(state *State, rdb *redis.Client, verifier RequestVerifier) http
 	}
 }
 
-func WriteHandler(state *State, rdb *redis.Client, verifier RequestVerifier) http.HandlerFunc {
+func WriteHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := verifier(r)
 		if id == "" {

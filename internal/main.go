@@ -13,10 +13,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
+	"manualpilot/wsg/impl"
 )
 
-func Main(ctx context.Context, instanceID, redisURL string, bPrivateKey []byte, downstream string) (chi.Router, error) {
-	logger := slog.With(slog.String("instance", instanceID))
+func Main(
+	logger *slog.Logger,
+	ctx context.Context,
+	instanceID string,
+	rdb *redis.Client,
+	bPrivateKey []byte,
+	downstream string,
+) (chi.Router, error) {
 	privateKey := ed25519.PrivateKey(bPrivateKey)
 
 	b, err := Get(fmt.Sprintf("%v/.well-known/public.txt", downstream))
@@ -24,34 +31,27 @@ func Main(ctx context.Context, instanceID, redisURL string, bPrivateKey []byte, 
 		return nil, err
 	}
 
+	logger.Debug("downstream public key", slog.String("public-key", string(b)))
+
 	downstreamKey := make([]byte, base64.RawURLEncoding.DecodedLen(len(b)))
 	if _, err := base64.RawURLEncoding.Decode(downstreamKey, b); err != nil {
 		return nil, err
 	}
 
-	signer := NewRequestSigner(privateKey)
-	verifier := NewRequestVerifier(downstreamKey)
+	signer := impl.NewRequestSigner(privateKey)
+	verifier := impl.NewRequestVerifier(downstreamKey)
 
 	state := &State{
 		Lock:        sync.RWMutex{},
 		Connections: make(map[string]*Connection),
 	}
 
-	rOpts, err := redis.ParseURL(redisURL)
-	if err != nil {
-		return nil, err
-	}
-
-	rdb := redis.NewClient(rOpts)
-	if err := rdb.Info(ctx).Err(); err != nil {
-		return nil, err
-	}
-
 	go SubscribeEvents(ctx, logger, state, rdb, instanceID)
 
 	router := chi.NewRouter()
 	router.Use(mid(instanceID))
-	router.Get("/.well-known/public.txt", PublicKeyRoute(privateKey))
+	router.Get("/health", health())
+	router.Get("/.well-known/public.txt", impl.PublicKeyRoute(privateKey))
 	router.Get("/", JoinRoute(state, logger, rdb, signer, instanceID, downstream))
 	router.Post("/", WriteHandler(state, rdb, verifier))
 	router.Delete("/", DropHandler(state, rdb, verifier))
@@ -73,9 +73,16 @@ func Get(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+func health() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func mid(instanceID string) func(http.Handler) http.Handler {
 	return func(handler http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Server", "manualpilot")
 			w.Header().Set("Instance-ID", instanceID)
 			handler.ServeHTTP(w, r)
 		})

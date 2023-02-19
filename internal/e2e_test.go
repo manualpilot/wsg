@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +17,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/ksuid"
 
+	"golang.org/x/exp/slog"
+	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
 )
 
@@ -26,6 +27,9 @@ const defaultWaitTime = 100 * time.Millisecond
 func TestE2E(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	handler := slog.HandlerOptions{AddSource: true}
+	logger := slog.New(handler.NewTextHandler(os.Stdout))
 
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -39,8 +43,8 @@ func TestE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := NewRequestSigner(privateKey)
-	verifier := NewRequestVerifier(publicKey)
+	signer := impl.NewRequestSigner(privateKey)
+	verifier := impl.NewRequestVerifier(publicKey)
 
 	kInstanceID, err := ksuid.NewRandom()
 	if err != nil {
@@ -55,7 +59,7 @@ func TestE2E(t *testing.T) {
 	deleted := false
 
 	dr := chi.NewRouter()
-	dr.Get("/.well-known/public.txt", PublicKeyRoute(privateKey))
+	dr.Get("/.well-known/public.txt", impl.PublicKeyRoute(privateKey))
 	dr.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("param") == "" {
 			t.Fatal("query params not forwarded")
@@ -115,7 +119,7 @@ func TestE2E(t *testing.T) {
 
 	downstream := httptest.NewServer(dr)
 
-	router, err := Main(ctx, instanceID, fmt.Sprintf("redis://%v", redisAddr), privateKey, downstream.URL)
+	router, err := Main(logger, ctx, instanceID, rdb, privateKey, downstream.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
