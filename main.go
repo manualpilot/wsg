@@ -21,8 +21,8 @@ type Env struct {
 	ServiceDomain    string                `env:"SERVICE_DOMAIN,required"`
 	DownstreamURL    string                `env:"DOWNSTREAM_URL,required"`
 	RedisURL         string                `env:"REDIS_URL,required"`
-	PorkbunAPIKey    string                `env:"PORKBUN_API_KEY,default=pk1_33c6fabb89beae993a7c1297fda3693db37224f66d3826b1e55c79807301665d"`
-	PorkbunAPISecret string                `env:"PORKBUN_API_SECRET,default=sk1_ef4aa665b02eb9647891d154dd1191892f97fbd8a0eddcdc9399ea0f45dd4f13"`
+	PorkbunAPIKey    string                `env:"PORKBUN_API_KEY,required"`
+	PorkbunAPISecret string                `env:"PORKBUN_API_SECRET,required"`
 	PrivateKey       envconfig.Base64Bytes `env:"PRIVATE_KEY,required"`
 }
 
