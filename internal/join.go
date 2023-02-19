@@ -15,6 +15,7 @@ import (
 	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
 	"strconv"
+	"fmt"
 )
 
 func JoinRoute(
@@ -37,6 +38,7 @@ func JoinRoute(
 		}
 
 		id := kid.String()
+		rid := fmt.Sprintf("ws:%v", id)
 		log := logger.With(slog.String("id", id))
 		hc := http.Client{Timeout: 30 * time.Second}
 
@@ -99,12 +101,12 @@ func JoinRoute(
 			"sent": "0",
 		}
 
-		if err := rdb.HSet(ctx, id, data).Err(); err != nil {
+		if err := rdb.HSet(ctx, rid, data).Err(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if err := rdb.Expire(ctx, id, 90*time.Second).Err(); err != nil {
+		if err := rdb.Expire(ctx, rid, 90*time.Second).Err(); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -114,7 +116,7 @@ func JoinRoute(
 			defer state.Lock.Unlock()
 			delete(state.Connections, id)
 			close(msgChan)
-			if err := rdb.Del(context.Background(), id).Err(); err != nil {
+			if err := rdb.Del(context.Background(), rid).Err(); err != nil {
 				log.Error("failed to cleanup", err)
 			}
 
@@ -144,7 +146,7 @@ func JoinRoute(
 					return
 				}
 
-				if err := rdb.HIncrBy(ctx, id, "recv", 1).Err(); err != nil {
+				if err := rdb.HIncrBy(ctx, rid, "recv", 1).Err(); err != nil {
 					log.Error("failed to update received messages stats", err)
 					return
 				}
@@ -186,7 +188,7 @@ func JoinRoute(
 						return
 					}
 
-					if err := rdb.Expire(ctx, id, 60*time.Second).Err(); err != nil {
+					if err := rdb.Expire(ctx, rid, 60*time.Second).Err(); err != nil {
 						log.Error("failed extend exp", err)
 						_ = conn.Close(websocket.StatusAbnormalClosure, "it broke")
 						return
@@ -215,7 +217,7 @@ func JoinRoute(
 					return
 				}
 
-				if err := rdb.HIncrBy(ctx, id, "sent", 1).Err(); err != nil {
+				if err := rdb.HIncrBy(ctx, rid, "sent", 1).Err(); err != nil {
 					log.Error("failed to update sent messages stats", err)
 					return
 				}

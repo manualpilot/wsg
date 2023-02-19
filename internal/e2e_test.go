@@ -20,6 +20,7 @@ import (
 	"golang.org/x/exp/slog"
 	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
+	"fmt"
 )
 
 const defaultWaitTime = 100 * time.Millisecond
@@ -53,6 +54,7 @@ func TestE2E(t *testing.T) {
 
 	instanceID := kInstanceID.String()
 	connectionID := ""
+	redisConnectionID := ""
 
 	wroteTextMessage := false
 	wroteBinaryMessage := false
@@ -79,6 +81,7 @@ func TestE2E(t *testing.T) {
 			t.Fatal("no connection id")
 		}
 
+		redisConnectionID = fmt.Sprintf("ws:%v", connectionID)
 		w.WriteHeader(http.StatusOK)
 		return
 	})
@@ -163,7 +166,7 @@ func TestE2E(t *testing.T) {
 	}
 
 	time.Sleep(defaultWaitTime)
-	res, err := rdb.HGet(ctx, connectionID, "inst").Result()
+	res, err := rdb.HGet(ctx, redisConnectionID, "inst").Result()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +202,7 @@ func TestE2E(t *testing.T) {
 		t.Error("did not handle drop correctly")
 	}
 
-	if redis.Nil != rdb.HGet(ctx, connectionID, "inst").Err() {
+	if redis.Nil != rdb.HGet(ctx, redisConnectionID, "inst").Err() {
 		t.Error("did not clean up connection")
 	}
 

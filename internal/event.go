@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
 	"manualpilot/wsg/impl"
+	"fmt"
 )
 
 func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier) http.HandlerFunc {
@@ -20,6 +21,7 @@ func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier)
 			return
 		}
 
+		rid := fmt.Sprintf("ws:%v", id)
 		ctx := r.Context()
 
 		state.Lock.RLock()
@@ -27,7 +29,7 @@ func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier)
 
 		connection, ok := state.Connections[id]
 		if !ok {
-			instanceID, err := rdb.HGet(ctx, id, "inst").Result()
+			instanceID, err := rdb.HGet(ctx, rid, "inst").Result()
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
@@ -65,6 +67,7 @@ func WriteHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier
 			return
 		}
 
+		rid := fmt.Sprintf("ws:%v", id)
 		ctx := r.Context()
 		isBinary := r.Header.Get("Content-Type") == "application/octet-stream"
 
@@ -79,7 +82,7 @@ func WriteHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier
 
 		connection, ok := state.Connections[id]
 		if !ok {
-			instanceID, err := rdb.Get(ctx, id).Result()
+			instanceID, err := rdb.Get(ctx, rid).Result()
 			if err != nil {
 				w.WriteHeader(http.StatusNotFound)
 				return
