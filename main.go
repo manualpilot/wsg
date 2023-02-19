@@ -16,6 +16,7 @@ import (
 
 	"manualpilot/wsg/impl"
 	"manualpilot/wsg/internal"
+	"time"
 )
 
 type Env struct {
@@ -77,11 +78,15 @@ func doMain(logger *slog.Logger) error {
 		}),
 	}
 
-	//goland:noinspection GoUnhandledErrorResult
-	defer server.Close()
+	defer func() {
+		ctx, rCancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		defer rCancel()
+		_ = redirect.Shutdown(ctx)
 
-	//goland:noinspection GoUnhandledErrorResult
-	defer redirect.Close()
+		ctx, sCancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		defer sCancel()
+		_ = server.Shutdown(ctx)
+	}()
 
 	logger.Debug("starting...", slog.String("address", server.Addr))
 
