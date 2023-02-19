@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
 	"manualpilot/wsg/impl"
-	"fmt"
 )
 
 func DropHandler(state *State, rdb *redis.Client, verifier impl.RequestVerifier) http.HandlerFunc {

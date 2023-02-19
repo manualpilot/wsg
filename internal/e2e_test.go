@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +21,6 @@ import (
 	"golang.org/x/exp/slog"
 	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
-	"fmt"
 )
 
 const defaultWaitTime = 100 * time.Millisecond

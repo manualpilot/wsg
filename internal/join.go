@@ -3,8 +3,10 @@ package internal
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,8 +16,6 @@ import (
 
 	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
-	"strconv"
-	"fmt"
 )
 
 func JoinRoute(
