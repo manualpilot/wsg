@@ -15,7 +15,6 @@ import (
 	"github.com/sethvargo/go-envconfig"
 	"golang.org/x/exp/slog"
 
-	"manualpilot/wsg/impl"
 	"manualpilot/wsg/internal"
 )
 
@@ -55,7 +54,7 @@ func doMain(logger *slog.Logger) error {
 		return err
 	}
 
-	tlsConfig, err := impl.TLSConfig(ctx, env.ServiceDomain, rdb)
+	tlsConfig, err := TLSConfig(ctx, env.ServiceDomain, rdb)
 	if err != nil {
 		return err
 	}
@@ -121,7 +120,7 @@ func doMain(logger *slog.Logger) error {
 
 func main() {
 	handler := slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
-	logger := slog.New(handler.NewTextHandler(os.Stdout))
+	logger := slog.New(handler.NewJSONHandler(os.Stdout))
 
 	if err := doMain(logger); err != nil {
 		logger.Error("failed to start", err)

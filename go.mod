@@ -7,6 +7,7 @@ require (
 	github.com/caddyserver/certmagic v0.17.2
 	github.com/go-chi/chi/v5 v5.0.8
 	github.com/libdns/porkbun v0.1.0
+	github.com/manualpilot/auth v0.0.1
 	github.com/redis/go-redis/v9 v9.0.1
 	github.com/segmentio/ksuid v1.0.4
 	github.com/sethvargo/go-envconfig v0.8.3

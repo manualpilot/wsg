@@ -18,8 +18,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/segmentio/ksuid"
 
+	"github.com/manualpilot/auth"
 	"golang.org/x/exp/slog"
-	"manualpilot/wsg/impl"
 	"nhooyr.io/websocket"
 )
 
@@ -44,8 +44,8 @@ func TestE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := impl.NewRequestSigner(privateKey)
-	verifier := impl.NewRequestVerifier(publicKey)
+	signer := auth.NewRequestSigner(privateKey, "Websocket-Gateway-Auth")
+	verifier := auth.NewRequestVerifier(publicKey, "Websocket-Gateway-Auth")
 
 	kInstanceID, err := ksuid.NewRandom()
 	if err != nil {
@@ -61,7 +61,7 @@ func TestE2E(t *testing.T) {
 	deleted := false
 
 	dr := chi.NewRouter()
-	dr.Get("/.well-known/public.txt", impl.PublicKeyRoute(privateKey))
+	dr.Get("/.well-known/public.txt", publicKeyRoute(privateKey))
 	dr.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("param") == "" {
 			t.Fatal("query params not forwarded")

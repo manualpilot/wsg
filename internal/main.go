@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/manualpilot/auth"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
-	"manualpilot/wsg/impl"
 )
 
 func Main(
@@ -38,8 +38,8 @@ func Main(
 		return nil, err
 	}
 
-	signer := impl.NewRequestSigner(privateKey)
-	verifier := impl.NewRequestVerifier(downstreamKey)
+	signer := auth.NewRequestSigner(privateKey, "Websocket-Gateway-Auth")
+	verifier := auth.NewRequestVerifier(downstreamKey, "Websocket-Gateway-Auth")
 
 	state := &State{
 		Lock:        sync.RWMutex{},
@@ -51,7 +51,7 @@ func Main(
 	router := chi.NewRouter()
 	router.Use(mid(instanceID))
 	router.Get("/health", health())
-	router.Get("/.well-known/public.txt", impl.PublicKeyRoute(privateKey))
+	router.Get("/.well-known/public.txt", publicKeyRoute(privateKey))
 	router.Get("/", JoinRoute(state, logger, rdb, signer, instanceID, downstream))
 	router.Post("/", WriteHandler(state, rdb, verifier))
 	router.Delete("/", DropHandler(state, rdb, verifier))
@@ -86,5 +86,17 @@ func mid(instanceID string) func(http.Handler) http.Handler {
 			w.Header().Set("Instance-ID", instanceID)
 			handler.ServeHTTP(w, r)
 		})
+	}
+}
+
+func publicKeyRoute(privateKey ed25519.PrivateKey) http.HandlerFunc {
+	pubKey := privateKey.Public().(ed25519.PublicKey)
+	publicKey := make([]byte, base64.RawURLEncoding.EncodedLen(len(pubKey)))
+	base64.RawURLEncoding.Encode(publicKey, pubKey)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(publicKey)
 	}
 }
