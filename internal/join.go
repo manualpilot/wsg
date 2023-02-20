@@ -14,7 +14,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"golang.org/x/exp/slog"
 
-	"manualpilot/wsg/impl"
+	"github.com/manualpilot/auth"
 	"nhooyr.io/websocket"
 )
 
@@ -22,7 +22,7 @@ func JoinRoute(
 	state *State,
 	logger *slog.Logger,
 	rdb *redis.Client,
-	signer impl.RequestSigner,
+	signer auth.RequestSigner,
 	instanceID, downstream string,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
