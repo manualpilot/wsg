@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/sethvargo/go-envconfig"
@@ -16,19 +17,16 @@ import (
 
 	"manualpilot/wsg/impl"
 	"manualpilot/wsg/internal"
-	"time"
 )
 
 type Env struct {
-	Port             int                   `env:"PORT,default=8080"`
-	RedirectPort     int                   `env:"REDIRECT_PORT,default=9090"`
-	InstanceID       string                `env:"INSTANCE_ID,required"`
-	ServiceDomain    string                `env:"SERVICE_DOMAIN,required"`
-	DownstreamURL    string                `env:"DOWNSTREAM_URL,required"`
-	RedisURL         string                `env:"REDIS_URL,required"`
-	PorkbunAPIKey    string                `env:"PORKBUN_API_KEY,required"`
-	PorkbunAPISecret string                `env:"PORKBUN_API_SECRET,required"`
-	PrivateKey       envconfig.Base64Bytes `env:"PRIVATE_KEY,required"`
+	Port          int                   `env:"PORT,default=8080"`
+	RedirectPort  int                   `env:"REDIRECT_PORT,default=9090"`
+	InstanceID    string                `env:"INSTANCE_ID,required"`
+	ServiceDomain string                `env:"SERVICE_DOMAIN,required"`
+	DownstreamURL string                `env:"DOWNSTREAM_URL,required"`
+	RedisURL      string                `env:"REDIS_URL,required"`
+	PrivateKey    envconfig.Base64Bytes `env:"PRIVATE_KEY,required"`
 }
 
 func doMain(logger *slog.Logger) error {
@@ -57,7 +55,7 @@ func doMain(logger *slog.Logger) error {
 		return err
 	}
 
-	tlsConfig, err := impl.TLSConfig(env.ServiceDomain, env.PorkbunAPIKey, env.PorkbunAPISecret, rdb)
+	tlsConfig, err := impl.TLSConfig(ctx, env.ServiceDomain, rdb)
 	if err != nil {
 		return err
 	}
@@ -79,13 +77,17 @@ func doMain(logger *slog.Logger) error {
 	}
 
 	defer func() {
-		ctx, rCancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		ctx, rCancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer rCancel()
-		_ = redirect.Shutdown(ctx)
+		if err := redirect.Shutdown(ctx); err != nil {
+			logger.Error("failed to shutdown redirect server", err)
+		}
 
-		ctx, sCancel := context.WithTimeout(context.Background(), 1 * time.Minute)
+		ctx, sCancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer sCancel()
-		_ = server.Shutdown(ctx)
+		if err := server.Shutdown(ctx); err != nil {
+			logger.Error("failed to shutdown web server", err)
+		}
 	}()
 
 	logger.Debug("starting...", slog.String("address", server.Addr))

@@ -1,6 +1,6 @@
 app = "wsg"
 kill_signal = "SIGINT"
-kill_timeout = 5
+kill_timeout = 180
 
 [build]
   builder = "paketobuildpacks/builder:base"

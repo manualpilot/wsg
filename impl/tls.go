@@ -14,6 +14,7 @@ import (
 	"github.com/caddyserver/certmagic"
 	"github.com/libdns/porkbun"
 	"github.com/redis/go-redis/v9"
+	"github.com/sethvargo/go-envconfig"
 )
 
 type storage struct {
@@ -112,13 +113,21 @@ func (s *storage) Stat(ctx context.Context, key string) (certmagic.KeyInfo, erro
 	return info, nil
 }
 
-// TLSConfig should return a tls.Config for the https server
-// or nil if plain http should be used
-func TLSConfig(domain, apiKey, apiSecret string, rdb *redis.Client) (*tls.Config, error) {
+type EnvTLS struct {
+	PorkbunAPIKey    string `env:"PORKBUN_API_KEY,required"`
+	PorkbunAPISecret string `env:"PORKBUN_API_SECRET,required"`
+}
+
+func TLSConfig(ctx context.Context, domain string, rdb *redis.Client) (*tls.Config, error) {
+	env := EnvTLS{}
+	if err := envconfig.Process(ctx, &env); err != nil {
+		return nil, err
+	}
+
 	certmagic.DefaultACME.DNS01Solver = &certmagic.DNS01Solver{
 		DNSProvider: &porkbun.Provider{
-			APIKey:       apiKey,
-			APISecretKey: apiSecret,
+			APIKey:       env.PorkbunAPIKey,
+			APISecretKey: env.PorkbunAPISecret,
 		},
 	}
 
