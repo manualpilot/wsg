@@ -23,6 +23,7 @@ func Main(
 	rdb *redis.Client,
 	bPrivateKey []byte,
 	downstream string,
+	serviceDomain string,
 ) (chi.Router, error) {
 	privateKey := ed25519.PrivateKey(bPrivateKey)
 
@@ -38,8 +39,8 @@ func Main(
 		return nil, err
 	}
 
-	signer := auth.NewRequestSigner(privateKey, "Websocket-Gateway-Auth")
-	verifier := auth.NewRequestVerifier(downstreamKey, "Websocket-Gateway-Auth")
+	signer := auth.NewRequestSigner[any](privateKey, "Websocket-Gateway-Auth")
+	verifier := auth.NewRequestVerifier[any](downstreamKey, "Websocket-Gateway-Auth")
 
 	state := &State{
 		Lock:        sync.RWMutex{},
@@ -52,7 +53,7 @@ func Main(
 	router.Use(mid(instanceID))
 	router.Get("/health", health())
 	router.Get("/.well-known/public.txt", publicKeyRoute(privateKey))
-	router.Get("/", JoinRoute(state, logger, rdb, signer, instanceID, downstream))
+	router.Get("/", JoinRoute(state, logger, rdb, signer, instanceID, downstream, serviceDomain))
 	router.Post("/", WriteHandler(state, rdb, verifier))
 	router.Delete("/", DropHandler(state, rdb, verifier))
 

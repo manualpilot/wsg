@@ -14,16 +14,16 @@ import (
 	"github.com/segmentio/ksuid"
 	"golang.org/x/exp/slog"
 
-	"github.com/manualpilot/auth"
 	"nhooyr.io/websocket"
+	"io"
 )
 
-func JoinRoute(
+func JoinRoute[T any](
 	state *State,
 	logger *slog.Logger,
 	rdb *redis.Client,
-	signer auth.RequestSigner,
-	instanceID, downstream string,
+	signer func(r *http.Request, id string, meta *T) error,
+	instanceID, downstream, serviceDomain string,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithCancel(r.Context())
@@ -48,7 +48,7 @@ func JoinRoute(
 			return
 		}
 
-		if err := signer(r, id); err != nil {
+		if err := signer(r, id, nil); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -70,17 +70,28 @@ func JoinRoute(
 			return
 		}
 
-		if resp.StatusCode != http.StatusOK {
+		// TODO: could we close this earlier?
+		//goland:noinspection GoUnhandledErrorResult
+		defer resp.Body.Close()
+
+		meta, err := io.ReadAll(resp.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 			w.WriteHeader(resp.StatusCode)
 			return
 		}
 
+		overrideID := resp.Header.Get("WebSocket-Gateway-Override-ID")
+		if overrideID != "" {
+			id = overrideID
+		}
+
 		opts := &websocket.AcceptOptions{
-			Subprotocols:         nil,
-			InsecureSkipVerify:   false,
-			OriginPatterns:       nil,
-			CompressionMode:      0,
-			CompressionThreshold: 0,
+			OriginPatterns: []string{serviceDomain},
 		}
 
 		conn, err := websocket.Accept(w, r, opts)
@@ -125,8 +136,12 @@ func JoinRoute(
 				return
 			}
 
-			if err := signer(req, id); err != nil {
+			if err := signer(req, id, nil); err != nil {
 				return
+			}
+
+			if len(meta) > 0 {
+				req.Header.Set("Websocket-Gateway-Meta", string(meta))
 			}
 
 			resp, err := hc.Do(req)
@@ -156,8 +171,12 @@ func JoinRoute(
 					return
 				}
 
-				if err := signer(req, id); err != nil {
+				if err := signer(req, id, nil); err != nil {
 					return
+				}
+
+				if len(meta) > 0 {
+					req.Header.Set("Websocket-Gateway-Meta", string(meta))
 				}
 
 				if typ == websocket.MessageBinary {

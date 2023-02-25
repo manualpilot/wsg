@@ -44,8 +44,8 @@ func TestE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	signer := auth.NewRequestSigner(privateKey, "Websocket-Gateway-Auth")
-	verifier := auth.NewRequestVerifier(publicKey, "Websocket-Gateway-Auth")
+	signer := auth.NewRequestSigner[any](privateKey, "Websocket-Gateway-Auth")
+	verifier := auth.NewRequestVerifier[any](publicKey, "Websocket-Gateway-Auth")
 
 	kInstanceID, err := ksuid.NewRandom()
 	if err != nil {
@@ -76,7 +76,7 @@ func TestE2E(t *testing.T) {
 			t.Fatal("no auth token")
 		}
 
-		connectionID = verifier(r)
+		connectionID, _ = verifier(r)
 		if connectionID == "" {
 			t.Fatal("no connection id")
 		}
@@ -92,7 +92,7 @@ func TestE2E(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if connectionID != verifier(r) {
+		if cid, _ := verifier(r); connectionID != cid {
 			t.Fatal("no connection id")
 		}
 
@@ -110,7 +110,7 @@ func TestE2E(t *testing.T) {
 	})
 
 	dr.Delete("/", func(w http.ResponseWriter, r *http.Request) {
-		if connectionID != verifier(r) {
+		if cid, _ := verifier(r); connectionID != cid {
 			t.Fatal("no connection id")
 		}
 
@@ -122,7 +122,7 @@ func TestE2E(t *testing.T) {
 
 	downstream := httptest.NewServer(dr)
 
-	router, err := Main(logger, ctx, instanceID, rdb, privateKey, downstream.URL)
+	router, err := Main(logger, ctx, instanceID, rdb, privateKey, downstream.URL, "example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestE2E(t *testing.T) {
 	}
 
 	req.Header.Set("Content-Type", "text/plain")
-	if err := signer(req, connectionID); err != nil {
+	if err := signer(req, connectionID, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -252,7 +252,7 @@ func TestE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := signer(req, connectionID); err != nil {
+	if err := signer(req, connectionID, nil); err != nil {
 		t.Fatal(err)
 	}
 

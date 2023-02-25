@@ -49,7 +49,7 @@ func doMain(logger *slog.Logger) error {
 		return err
 	}
 
-	router, err := internal.Main(logger, ctx, env.InstanceID, rdb, env.PrivateKey, env.DownstreamURL)
+	router, err := internal.Main(logger, ctx, env.InstanceID, rdb, env.PrivateKey, env.DownstreamURL, env.ServiceDomain)
 	if err != nil {
 		return err
 	}

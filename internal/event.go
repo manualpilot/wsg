@@ -8,14 +8,13 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/manualpilot/auth"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/exp/slog"
 )
 
-func DropHandler(state *State, rdb *redis.Client, verifier auth.RequestVerifier) http.HandlerFunc {
+func DropHandler[T any](state *State, rdb *redis.Client, verifier func(r *http.Request) (string, *T)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := verifier(r)
+		id, _ := verifier(r)
 		if id == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -59,9 +58,14 @@ func DropHandler(state *State, rdb *redis.Client, verifier auth.RequestVerifier)
 	}
 }
 
-func WriteHandler(state *State, rdb *redis.Client, verifier auth.RequestVerifier) http.HandlerFunc {
+func WriteHandler[T any](
+	state *State,
+	rdb *redis.Client,
+	verifier func(r *http.Request) (string, *T),
+) http.HandlerFunc {
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := verifier(r)
+		id, _ := verifier(r)
 		if id == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
