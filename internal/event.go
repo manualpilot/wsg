@@ -63,7 +63,6 @@ func WriteHandler[T any](
 	rdb *redis.Client,
 	verifier func(r *http.Request) (string, *T),
 ) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, _ := verifier(r)
 		if id == "" {

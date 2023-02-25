@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,7 +16,6 @@ import (
 	"golang.org/x/exp/slog"
 
 	"nhooyr.io/websocket"
-	"io"
 )
 
 func JoinRoute[T any](
